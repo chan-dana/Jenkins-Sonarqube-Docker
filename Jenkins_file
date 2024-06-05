@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/your-username/ecommerce-website.git'
+            }
+        }
+        stage('Build') {
+            steps {
+                script {
+                    if (fileExists('pom.xml')) {
+                        sh 'mvn clean install'
+                    } else if (fileExists('package.json')) {
+                        sh 'npm install'
+                    }
+                }
+            }
+        }
+        stage('Test') {
+            steps {
+                script {
+                    if (fileExists('pom.xml')) {
+                        sh 'mvn test'
+                    } else if (fileExists('package.json')) {
+                        sh 'npm test'
+                    }
+                }
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build('your-docker-image')
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
+                        docker.image('your-docker-image').push('latest')
+                    }
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    // Example deployment steps
+                    sh 'kubectl apply -f k8s-deployment.yaml'
+                }
+            }
+        }
+    }
+}
